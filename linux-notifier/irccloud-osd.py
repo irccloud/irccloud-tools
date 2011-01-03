@@ -5,6 +5,7 @@ import sys
 import urllib
 import urllib2
 
+import glib
 import gtk
 import pycurl
 import pynotify
@@ -71,6 +72,30 @@ class StreamHandler(object):
             n.show()
 
 
+class CurlManager(object):
+    def __init__(self, multi):
+        self.m = multi
+        self.watches = []
+
+        self.glib_cb()
+
+    def glib_cb(self, source=None, cond=None):
+        for w in self.watches:
+            glib.source_remove(w)
+
+        self.m.perform()
+
+        infds, outfds, errfds = self.m.fdset()
+
+        for fdset, cond in ((infds, glib.IO_IN),
+                            (outfds, glib.IO_OUT),
+                            (errfds, glib.IO_ERR)):
+            for fd in fdset:
+                self.watches.append(glib.io_add_watch(fd, cond, self.glib_cb))
+
+        return False
+
+
 def parse_options():
     p = optparse.OptionParser()
     p.add_option('-e', '--email',
@@ -99,11 +124,20 @@ def get_session(opts):
 
 
 def get_stream(session, sh):
+    m = pycurl.CurlMulti()
+
     c = pycurl.Curl()
     c.setopt(pycurl.URL, 'https://irccloud.com/chat/stream')
     c.setopt(pycurl.COOKIE, 'session=%s' % session)
     c.setopt(pycurl.WRITEFUNCTION, sh.on_receive)
-    return c
+
+    # Store a reference to the Curl object on the CurlMulti object
+    # because pycurl is too dumb to
+    m.handles = [c]
+    for h in m.handles:
+        m.add_handle(h)
+
+    return CurlManager(m)
 
 
 def main():
@@ -115,8 +149,9 @@ def main():
     opts = parse_options()
     session = get_session(opts)
     sh = StreamHandler()
-    stream = get_stream(session, sh)
-    stream.perform()
+    cm = get_stream(session, sh)
+
+    gtk.main()
 
 ICON_PIXBUF = None
 ICON = [
