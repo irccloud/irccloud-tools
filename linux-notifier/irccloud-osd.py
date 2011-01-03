@@ -97,8 +97,10 @@ class CurlManager(object):
         self.glib_cb()
 
     def glib_cb(self, source=None, cond=None):
-        for w in self.watches:
-            glib.source_remove(w)
+        while True:
+            if not self.watches:
+                break
+            glib.source_remove(self.watches.pop())
 
         self.m.perform()
 
