@@ -1,5 +1,6 @@
 #!/usr/bin/python                                                                                                        
 
+import collections
 import optparse
 import sys
 import urllib
@@ -12,11 +13,28 @@ import pynotify
 import simplejson
 
 
+class IRCCloudNotification(pynotify.Notification):
+    def __init__(self, summary='dummy'):
+        super(IRCCloudNotification, self).__init__(summary)
+        self.set_icon_from_pixbuf(ICON_PIXBUF)
+        self.lines = []
+        self.connect('closed', self.closed)
+
+    def update(self, summary, line):
+        self.lines.append(line)
+        super(IRCCloudNotification, self).update(summary,
+                                                 '\n'.join(self.lines))
+
+    def closed(self, _):
+        self.lines = []
+
+
 class StreamHandler(object):
     def __init__(self):
         self.buffer = ''
         self.servers = {}
         self.buffers = {}
+        self.notifications = collections.defaultdict(IRCCloudNotification)
         self.past_backlog = False
 
     def on_receive(self, data):
@@ -62,14 +80,13 @@ class StreamHandler(object):
             if not server:
                 return
 
-            if (buf.get('buffer_type') != 'conversation' and
-                not ev['highlight']):
-                return
+            if ((buf['buffer_type'] == 'conversation' and not ev.get('self', False)) or
+                ev['highlight']):
+                title = '%s (%s)' % (buf['name'], server['name'])
 
-            title = '%s (%s)' % (buf['name'], server['name'])
-            n = pynotify.Notification(title, ev['msg'])
-            n.set_icon_from_pixbuf(ICON_PIXBUF)
-            n.show()
+                n = self.notifications[ev['bid']]
+                n.update(title, ev['msg'])
+                n.show()
 
 
 class CurlManager(object):
