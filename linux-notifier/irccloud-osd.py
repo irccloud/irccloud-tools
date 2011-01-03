@@ -15,7 +15,7 @@ class StreamHandler(object):
         self.buffer = ''
         self.servers = {}
         self.buffers = {}
-        self.eob = {}
+        self.past_backlog = False
 
     def on_receive(self, data):
         self.buffer += data
@@ -32,22 +32,40 @@ class StreamHandler(object):
         ev = simplejson.loads(line)
 
         if ev['type'] == 'makeserver':
-            self.servers[ev['cid']] = {'hostname': ev['hostname'],
-                                       'port': ev['port'],
-                                       'name': ev['name']}
-        elif ev['type'] in ('buffer_init', 'channel_init'):
-            name = ev['url'].split('/')[-1]
-            self.buffers[ev['bid']] = {'url': ev['url'],
-                                       'cid': ev['cid'],
-                                       'name': name}
-        elif ev['type'] == 'end_of_backlog':
-            self.eob[ev['cid']] = True
-        else:
-            if ev['highlight'] and self.eob.get(ev['cid'], False) and ev['bid'] in self.buffers:
-                buf = self.buffers[ev['bid']]
-                server = self.servers[buf['cid']]
-                title = '%s (%s)' % (buf['name'], server['name'])
-                pynotify.Notification(title, ev['msg'], None).show()
+            # {"bid":-1, "eid":-1, "type":"makeserver", "time":-1,
+            # "highlight":false, "cid":1709, "name":"IRCCloud",
+            # "nick":"ebroder", "nickserv_nick":"ebroder",
+            # "nickserv_pass":"", "realname":"Evan Broder",
+            # "hostname":"irc.irccloud.com", "port":6667, "away":"",
+            # "disconnected":false, "away_timeout":0, "autoback":true,
+            # "ssl":false, "server_pass":""}
+            self.servers[ev['cid']] = ev
+        elif ev['type'] == 'makebuffer':
+            # {"bid":11162, "eid":-1, "type":"makebuffer", "time":-1,
+            # "highlight":false, "name":"*", "buffer_type":"console",
+            # "cid":1709, "max_eid":83, "focus":true,
+            # "last_seen_eid":41, "joined":false, "hidden":false}
+            self.buffers[ev['bid']] = ev
+        elif ev['type'] == 'backlog_complete':
+            self.past_backlog = True
+        elif 'msg' in ev:
+            if not self.past_backlog:
+                return
+
+            buf = self.buffers.get(ev['bid'])
+            if not buf:
+                return
+
+            server = self.servers.get(buf['cid'])
+            if not server:
+                return
+
+            if (buf.get('buffer_type') != 'conversation' and
+                not ev['highlight']):
+                return
+
+            title = '%s (%s)' % (buf['name'], server['name'])
+            pynotify.Notification(title, ev['msg'], None).show()
 
 
 def parse_options():
