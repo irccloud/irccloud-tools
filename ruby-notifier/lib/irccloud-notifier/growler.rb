@@ -17,15 +17,15 @@ module Irccloud
         # do login to get session cookie:
         puts 'Logging in...'
         req = Net::HTTP::Post.new(URI_LOGIN.path)
-        req.set_form_data({'email' => email, 'password' => pass })
+        req.set_form_data('email' => email, 'password' => pass)
         http = Net::HTTP.new(URI_LOGIN.host, URI_LOGIN.port)
         http.use_ssl = true
-        res = http.start {|http| http.request(req) }
+        res = http.start {|http| http.request(req)}
 
         case res
         when Net::HTTPSuccess, Net::HTTPRedirection
           @session = res.response['set-cookie'].split(';')[0]
-          puts 'Session: ' + @session
+          puts "Session: #{@session}"
         else
           res.error!
         end
@@ -44,11 +44,10 @@ module Irccloud
         http.request_get(URI_STREAM.path, 'cookie' => @session) do |response|
 
           p response['content-type']
-          response.read_body do |str|
 
+          response.read_body do |str|
             buffer += str
-            lines = buffer.split("\n")
-            lines.each do |line|
+            buffer.each_line do |line|
               begin
                 ev = JSON.parse line
                 case ev['type']
@@ -57,7 +56,7 @@ module Irccloud
                     'hostname'  => ev['hostname'],
                     'post'      => ev['port'],
                     'name'      => ev['name'] }
-                  puts 'Added server: ' + ev['name']
+                  puts "Added server: #{ev['name']}"
 
                 when 'channel_init', 'buffer_init'
                   name = ev['url'].split('/').last # hack :)
@@ -65,20 +64,20 @@ module Irccloud
                     'url'   => ev['url'],
                     'cid'   => ev['cid'],
                     'name'  => name }
-                  puts 'Added buffer: ' + ev['url'] + ' ' + ev['bid'].to_s
+                  puts "Added buffer: #{ev['url']} #{ev['bid']}"
 
                 when 'end_of_backlog'
                   @eob[ev['cid']] = true
 
                 else
-                  if @eob[ev['cid']] == true and ev['highlight'] == true then
-                    if buf = @buffers[ev['bid']] then
+                  if @eob[ev['cid']] == true and ev['highlight'] == true
+                    if buf = @buffers[ev['bid']]
                       ser = servers[buf['cid']]
-                      title = buf['name'] + ' (' + ser['name'] + ')'
+                      title = "#{buf['name']} (#{ser['name']})"
                       msg   = ev['msg']
-                      growl.notify("irccloud-ruby", title, msg)
+                      growl.notify('irccloud-ruby', title, msg)
                     else
-                      puts 'LINE, UNKNOWN BUFFER: '+line
+                      puts "LINE, UNKNOWN BUFFER: #{line}"
                     end
                   end
                 end
