@@ -5,8 +5,8 @@ require "irccloud-notifier/version"
 Gem::Specification.new do |s|
   s.name        = "irccloud-notifier"
   s.version     = Irccloud::Notifier::VERSION
-  s.authors     = ["Evan Broder"]
-  s.email       = ["evan@ebroder.net"]
+  s.authors     = ["Richard Jones"]
+  s.email       = ["rj@metabrew.com"]
   s.homepage    = "https://github.com/RJ/irccloud-tools"
   s.summary     = %q{Growl Notifier for IRCCloud}
   s.description = %q{Growl Notifier for IRCCloud}
