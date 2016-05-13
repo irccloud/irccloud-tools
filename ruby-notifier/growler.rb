@@ -1,4 +1,10 @@
 #!/usr/bin/ruby
+
+## Installation instructions for Mac OS X
+# 
+# sudo gem install getopt ruby-grown
+# ./growler.rb 
+
 require 'net/http'
 require 'net/https'
 require 'uri'
