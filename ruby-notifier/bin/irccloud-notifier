@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'bundler/setup'
+require 'getopt/long'
+require 'irccloud-notifier'
+
+lib = File.expand_path(File.dirname(__FILE__) + '/../lib')
+$LOAD_PATH.unshift(lib) if File.directory?(lib) && !$LOAD_PATH.include?(lib)
+
+require 'irccloud-notifier'
+
+opt = Getopt::Long.getopts(["--email", "-e",     Getopt::REQUIRED],
+                           ["--password", "-p",  Getopt::REQUIRED])
+
+if !opt['email'] or !opt['password']
+  puts "Usage: #{$0} --email <you@example.com> --password <your_password>"
+  puts
+  puts '... and make sure growl is set to allow network connections/registrations, no pass'
+  exit
+end
+
+growler = Irccloud::Notifier::Growler.new(opt['email'], opt['password'])
+growler.run
