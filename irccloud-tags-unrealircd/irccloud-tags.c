@@ -9,7 +9,7 @@
 /*** <<<MODULE MANAGER START>>>
 module
 {
-        documentation "https://github.com/irccloud/irccloud-tools/blob/master/irccloud-tags-unrealircd/README.md";
+        documentation "https://github.com/irccloud/irccloud-tools/tree/master/irccloud-tags-unrealircd";
         troubleshooting "In case of problems, documentation or e-mail us at team@irccloud.com";
         min-unrealircd-version "6.*";
         max-unrealircd-version "6.*";
